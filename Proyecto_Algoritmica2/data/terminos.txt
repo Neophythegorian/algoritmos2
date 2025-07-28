@@ -1,0 +1,6 @@
+Algorithms: 1, 5, 10
+Binary search: 15, 20
+Binary tree: 25, 30
+Data structures: 35, 40, 45
+Hash table: 50, 55
+Sorting: 60, 65, 70

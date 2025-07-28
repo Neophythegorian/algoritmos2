@@ -1,0 +1,4 @@
+algorithms: 1, 5, 10
+binary search: 15, 20
+data structures: 35, 40, 45, 151
+hash table: 50, 55
