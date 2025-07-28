@@ -1,6 +1,0 @@
-algorithms: 1, 5, 10
-binary search: 20
-binary tree: 25, 30
-data structures: 35, 40, 45
-hash table: 50, 55
-sort: 12, 13, 46, 87
