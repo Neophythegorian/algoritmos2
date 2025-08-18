@@ -1,0 +1,642 @@
+{
+	"info": {
+		"_postman_id": "d6db26af-6792-4372-b267-5d90eab60b79",
+		"name": "Poryecto Capstone Progra 4",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "41274294"
+	},
+	"item": [
+		{
+			"name": "2.4 Tareas",
+			"item": [
+				{
+					"name": "Players",
+					"item": [
+						{
+							"name": "CreatePlayer",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"// Extraer el id de la respuesta JSON\r",
+											"let response = pm.response.json();\r",
+											"let playerId = response.id;\r",
+											"\r",
+											"// Guardarlo en una variable de entorno\r",
+											"pm.environment.set(\"playerId\", playerId);\r",
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"name\": \"Alice\",\r\n    \"age\": 28,\r\n    \"email\": \"alice@example.com\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/players/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"players",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetAllPlayers",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/players/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"players",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetPlayer",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/players/{{playerId}}",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"players",
+										"{{playerId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "UpdatePlayer",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"name\": \"Alice Update\",\r\n    \"age\": 28,\r\n    \"email\": \"alice@example.com\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/players/{{playerId}}",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"players",
+										"{{playerId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "DeletePlayer",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/players/{{playerId}}",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"players",
+										"{{playerId}}"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Games",
+					"item": [
+						{
+							"name": "CreateGame",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"// Extraer el id de la respuesta JSON\r",
+											"let response = pm.response.json();\r",
+											"let gameId = response.id;\r",
+											"\r",
+											"// Guardarlo en una variable de entorno\r",
+											"pm.environment.set(\"gameId\", gameId);"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n\t\"title\": \"UNO\",\r\n\t\"status\": \"active\",\r\n\t\"maxPlayers\": 4\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/games/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"games",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetAllGames",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/games/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"games",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetGame",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/games/{{gameId}}",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"games",
+										"{{gameId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "UpdateGame",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n\t\"title\": \"UNO\",\r\n\t\"status\": \"finished\",\r\n\t\"maxPlayers\": 4\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/games/{{gameId}}",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"games",
+										"{{gameId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "DeleteGame",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/games/{{gameId}}",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"games",
+										"{{gameId}}"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Cards",
+					"item": [
+						{
+							"name": "CreateCard",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"// Extraer el id de la respuesta JSON\r",
+											"let response = pm.response.json();\r",
+											"let cardId = response.id;\r",
+											"\r",
+											"// Guardarlo en una variable de entorno\r",
+											"pm.environment.set(\"cardId\", cardId);\r",
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n\t\"color\": \"blue\",\r\n\t\"value\": \"3\",\r\n\t\"gameID\": \"{{gameId}}\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/cards/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"cards",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetCard",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/cards/{{cardId}}",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"cards",
+										"{{cardId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetCardByGame",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/cards/game/{{gameId}}",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"cards",
+										"game",
+										"{{gameId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "UpdateCard",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n\t\"color\": \"red\",\r\n\t\"value\": \"3\",\r\n\t\"gameID\": \"{{gameId}}\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/cards/{{cardId}}",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"cards",
+										"{{cardId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "DeleteCard",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/cards/{{cardId}}",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"cards",
+										"{{cardId}}"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Scores",
+					"item": [
+						{
+							"name": "CreateScore",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"// Extraer el id de la respuesta JSON\r",
+											"let response = pm.response.json();\r",
+											"let scoreId = response.id;\r",
+											"\r",
+											"// Guardarlo en una variable de entorno\r",
+											"pm.environment.set(\"scoreId\", scoreId);\r",
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n\t\"playerId\": \"{{playerId}}\",\r\n\t\"gameId\": \"{{gameId}}\",\r\n\t\"score\": 200\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/scores/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"scores",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetScore",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/scores/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"scores",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "GetScoresByPlayer",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/scores/player/{{playerId}}",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"scores",
+										"player",
+										"{{playerId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "getScoresByGame",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/scores/game/{{gameId}}",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"scores",
+										"game",
+										"{{gameId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "UpdateScore",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n\t\"playerId\": \"{{playerId}}\",\r\n\t\"gameId\": \"{{gameId}}\",\r\n\t\"score\": 300\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:3000/api/scores/{{scoreId}}",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"scores",
+										"{{scoreId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "DeleteScore",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:3000/api/scores/{{scoreId}}",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "3000",
+									"path": [
+										"api",
+										"scores",
+										"{{scoreId}}"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		}
+	]
+}

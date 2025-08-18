@@ -1,0 +1,37 @@
+{
+  "name": "proyectocapstone_progra4",
+  "version": "1.0.0",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitlab.com/Ing_Mapache/proyectocapstone_progra4.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://gitlab.com/Ing_Mapache/proyectocapstone_progra4/issues"
+  },
+  "homepage": "https://gitlab.com/Ing_Mapache/proyectocapstone_progra4#readme",
+  "description": "",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.0.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "ramda": "^0.31.3",
+    "sequelize": "^6.37.7",
+    "sqlite3": "^5.1.7",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "jest": "^30.0.5",
+    "nodemon": "^3.1.10"
+  }
+}
