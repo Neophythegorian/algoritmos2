@@ -1,5 +1,58 @@
 const { curry, pipe, compose, map, filter, reduce } = require('ramda');
 
+const Result = {
+  success: (value) => ({
+    isSuccess: true,
+    isFailure: false,
+    value,
+    error: null,
+    map: (fn) => {
+      try {
+        return Result.success(fn(value));
+      } catch (error) {
+        return Result.failure(error);
+      }
+    },
+    flatMap: (fn) => {
+      try {
+        return fn(value);
+      } catch (error) {
+        return Result.failure(error);
+      }
+    },
+    mapError: () => Result.success(value),
+    fold: (onFailure, onSuccess) => onSuccess(value),
+    getOrElse: () => value
+  }),
+  
+  failure: (error) => ({
+    isSuccess: false,
+    isFailure: true,
+    value: null,
+    error,
+    map: () => Result.failure(error),
+    flatMap: () => Result.failure(error),
+    mapError: (fn) => Result.failure(fn(error)),
+    fold: (onFailure, onSuccess) => onFailure(error),
+    getOrElse: (defaultValue) => defaultValue
+  })
+};
+
+const tryCatch = (fn) => (...args) => {
+  try {
+    const result = fn(...args);
+    if (result && typeof result.then === 'function') {
+      return result
+        .then(value => Result.success(value))
+        .catch(error => Result.failure(error));
+    }
+    return Result.success(result);
+  } catch (error) {
+    return Result.failure(error);
+  }
+};
+
+// ===== RESTO DEL CÓDIGO EXISTENTE =====
 const log = curry((prefix, message) => {
   console.log(`[${prefix}] ${message}`);
   return message;
@@ -141,18 +194,6 @@ const validateAndTransform = curry((validators, transformers, data) => {
   }
 });
 
-const tryCatch = curry((errorHandler, fn) => (...args) => {
-  try {
-    const result = fn(...args);
-    if (result && typeof result.then === 'function') {
-      return result.catch(errorHandler);
-    }
-    return result;
-  } catch (error) {
-    return errorHandler(error);
-  }
-});
-
 const when = curry((predicate, fn, value) => 
   predicate(value) ? fn(value) : value
 );
@@ -191,6 +232,8 @@ const omit = curry((keys, obj) => {
 });
 
 module.exports = {
+  Result,
+  tryCatch,
   log,
   handleError,
   Maybe,
@@ -207,7 +250,6 @@ module.exports = {
   throttle,
   partial,
   validateAndTransform,
-  tryCatch,
   when,
   unless,
   chunk,

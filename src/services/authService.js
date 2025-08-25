@@ -1,124 +1,158 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { curry, pipe } = require('ramda');
-const userRepository = require('../repositories/userRepository');
+const { Result, tryCatch } = require('../utils/functional');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRY = '24h';
 
-const hashPassword = curry(async (saltRounds, password) => {
-  return bcrypt.hash(password, saltRounds);
-});
-
-const comparePassword = curry(async (password, hashedPassword) => {
-  return bcrypt.compare(password, hashedPassword);
-});
-
-const generateToken = curry((secret, expiresIn, payload) => {
-  return jwt.sign(payload, secret, { expiresIn });
-});
-
-const verifyToken = curry((secret, token) => {
-  return jwt.verify(token, secret);
-});
-
-const withPasswordHashing = (createUserFn) => async (userData) => {
-  const hashedPassword = await hashPassword(10, userData.password);
-  return createUserFn({
-    ...userData,
-    password: hashedPassword
-  });
-};
-
-const withPasswordVerification = (loginFn) => async (credentials, user) => {
-  const isValidPassword = await comparePassword(credentials.password, user.password);
-  if (!isValidPassword) {
-    throw new Error('Invalid credentials');
+class PasswordService {
+  constructor(saltRounds = 10) {
+    this.saltRounds = saltRounds;
   }
-  return loginFn(user);
-};
 
-const createAccessToken = generateToken(JWT_SECRET, JWT_EXPIRY);
+  async hash(password) {
+    return tryCatch(async () => {
+      return await bcrypt.hash(password, this.saltRounds);
+    })();
+  }
 
-const createSessionToken = async (user) => {
-  const payload = {
-    userId: user.id,
-    username: user.username,
-    email: user.email
-  };
-  
-  const token = createAccessToken(payload);
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-  
-  await userRepository.createSession(user.id, token, expiresAt);
-  return token;
-};
+  async compare(password, hashedPassword) {
+    return tryCatch(async () => {
+      return await bcrypt.compare(password, hashedPassword);
+    })();
+  }
+}
 
-const validateAccessToken = async (token) => {
-  try {
-    const decoded = verifyToken(JWT_SECRET, token);
-    const session = await userRepository.findSessionByToken(token);
+class TokenService {
+  constructor(secret, expiry) {
+    this.secret = secret;
+    this.expiry = expiry;
+  }
+
+  generate(payload) {
+    return tryCatch(() => {
+      return jwt.sign(payload, this.secret, { expiresIn: this.expiry });
+    })();
+  }
+
+  verify(token) {
+    return tryCatch(() => {
+      return jwt.verify(token, this.secret);
+    })();
+  }
+}
+
+class AuthService {
+  constructor(userRepository, passwordService, tokenService) {
+    this.userRepository = userRepository;
+    this.passwordService = passwordService;
+    this.tokenService = tokenService;
+  }
+
+  async registerUser(userData) {
+    const hashResult = await this.passwordService.hash(userData.password);
     
-    if (!session) {
-      throw new Error('Session not found');
-    }
+    return hashResult.flatMap(async (hashedPassword) => {
+      const userToCreate = { ...userData, password: hashedPassword };
+      return await this.userRepository.write.create(userToCreate);
+    });
+  }
+
+  async loginUser(credentials) {
+    const userResult = await this.userRepository.read.findByUsername(credentials.username);
     
-    return {
-      user: {
-        id: session.user_id,
-        username: session.username,
-        email: session.email
-      },
-      session
+    return userResult.flatMap(async (users) => {
+      if (!users || users.length === 0) {
+        return Result.failure(new Error('User not found'));
+      }
+
+      const user = users[0];
+      const passwordResult = await this.passwordService.compare(credentials.password, user.password);
+      
+      return passwordResult.flatMap(async (isValid) => {
+        if (!isValid) {
+          return Result.failure(new Error('Invalid credentials'));
+        }
+
+        const tokenResult = await this.createSessionToken(user);
+        return tokenResult.map(token => ({ user, token }));
+      });
+    });
+  }
+
+  async createSessionToken(user) {
+    const payload = {
+      userId: user.id,
+      username: user.username,
+      email: user.email
     };
-  } catch (error) {
-    throw new Error('Invalid or expired token');
+    
+    const tokenResult = this.tokenService.generate(payload);
+    
+    return tokenResult.flatMap(async (token) => {
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const sessionResult = await this.userRepository.write.createSession(user.id, token, expiresAt);
+      return sessionResult.map(() => token);
+    });
   }
-};
 
-const registerUser = pipe(
-  withPasswordHashing(userRepository.createUser)
-);
+  async validateAccessToken(token) {
+    const sessionResult = await this.userRepository.read.findSessionByToken(token);
+    
+    return sessionResult.flatMap(async (session) => {
+      if (!session) {
+        return Result.failure(new Error('Session not found'));
+      }
 
-const loginUser = async (credentials) => {
-  const user = await userRepository.withUserFound(async (foundUser) => {
-    return withPasswordVerification(async (validUser) => {
-      const token = await createSessionToken(validUser);
-      return { user: validUser, token };
-    })(credentials, foundUser);
-  })(credentials.username);
-  
-  return user;
-};
-
-const logoutUser = async (token) => {
-  const success = await userRepository.invalidateSession(token);
-  if (!success) {
-    throw new Error('Session not found');
+      const tokenResult = this.tokenService.verify(token);
+      return tokenResult.map(() => ({
+        user: {
+          id: session.user_id,
+          username: session.username,
+          email: session.email
+        },
+        session
+      }));
+    });
   }
-  return { message: 'User logged out successfully' };
-};
 
-const getUserProfile = async (token) => {
-  const { user } = await validateAccessToken(token);
-  return user;
-};
+  async logoutUser(token) {
+    const result = await this.userRepository.write.invalidateSession(token);
+    return result.map(() => ({ message: 'User logged out successfully' }));
+  }
 
-const authenticateToken = async (req, res, next) => {
+  async getUserProfile(token) {
+    const validationResult = await this.validateAccessToken(token);
+    return validationResult.map(({ user }) => user);
+  }
+}
+
+class AuthServiceFactory {
+  static create(userRepository) {
+    const passwordService = new PasswordService();
+    const tokenService = new TokenService(JWT_SECRET, JWT_EXPIRY);
+    return new AuthService(userRepository, passwordService, tokenService);
+  }
+}
+
+const authenticateToken = (authService) => async (req, res, next) => {
   const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  const token = authHeader && authHeader.split(' ')[1];
   
   if (!token) {
     return res.status(401).json({ error: 'Access token required' });
   }
   
-  try {
-    const { user } = await validateAccessToken(token);
-    req.user = user;
-    next();
-  } catch (error) {
-    return res.status(403).json({ error: error.message });
-  }
+  const result = await authService.validateAccessToken(token);
+  
+  result.fold(
+    (error) => res.status(403).json({ error: error.message }),
+    ({ user }) => {
+      req.user = user;
+      next();
+    }
+  );
 };
 
 const extractTokenFromBody = (req, res, next) => {
@@ -128,27 +162,11 @@ const extractTokenFromBody = (req, res, next) => {
   next();
 };
 
-const cleanupExpiredSessions = async () => {
-  try {
-    const deletedCount = await userRepository.cleanExpiredSessions();
-    console.log(`Cleaned up ${deletedCount} expired sessions`);
-  } catch (error) {
-    console.error('Error cleaning up sessions:', error);
-  }
-};
-
-setInterval(cleanupExpiredSessions, 60 * 60 * 1000);
-
 module.exports = {
-  registerUser,
-  loginUser,
-  logoutUser,
-  getUserProfile,
-  validateAccessToken,
+  PasswordService,
+  TokenService,
+  AuthService,
+  AuthServiceFactory,
   authenticateToken,
-  extractTokenFromBody,
-  hashPassword: hashPassword(10),
-  comparePassword,
-  createAccessToken,
-  cleanupExpiredSessions
+  extractTokenFromBody
 };

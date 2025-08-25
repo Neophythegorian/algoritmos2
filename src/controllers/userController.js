@@ -1,5 +1,5 @@
 const { curry, pipe } = require('ramda');
-const authService = require('../services/authService');
+const { Result } = require('../utils/functional');
 const { 
   prepareUserForCreation, 
   prepareUserForResponse, 
@@ -7,130 +7,174 @@ const {
   validateUserLogin 
 } = require('../models/User');
 
+class ResponseHandler {
+  static send(res, statusCode, data) {
+    return res.status(statusCode).json(data);
+  }
+
+  static success(res, data) {
+    return this.send(res, 200, data);
+  }
+
+  static created(res, data) {
+    return this.send(res, 201, data);
+  }
+
+  static error(res, statusCode, message, details = null) {
+    const errorResponse = { 
+      error: message,
+      timestamp: new Date().toISOString(),
+      status: statusCode
+    };
+    
+    if (details) {
+      errorResponse.details = details;
+    }
+    
+    return this.send(res, statusCode, errorResponse);
+  }
+
+  static badRequest(res, message, details) {
+    return this.error(res, 400, message, details);
+  }
+
+  static unauthorized(res, message) {
+    return this.error(res, 401, message || 'Unauthorized');
+  }
+
+  static notFound(res, message) {
+    return this.error(res, 404, message || 'Resource not found');
+  }
+
+  static conflict(res, message) {
+    return this.error(res, 409, message || 'Conflict');
+  }
+
+  static serverError(res, message) {
+    return this.error(res, 500, message || 'Internal server error');
+  }
+}
+
+class InputValidator {
+  static validate(validator) {
+    return (req, res, next) => {
+      const validation = validator(req.body);
+      if (!validation.isValid) {
+        return ResponseHandler.badRequest(res, 'Validation failed', validation.errors);
+      }
+      next();
+    };
+  }
+
+  static validateRegistration = this.validate(validateUserRegistration);
+  static validateLogin = this.validate(validateUserLogin);
+}
+
+class ErrorMapper {
+  static mapAuthError(error) {
+    switch (error.message) {
+      case 'User already exists':
+        return { status: 409, message: 'User already exists' };
+      case 'User not found':
+      case 'Invalid credentials':
+        return { status: 401, message: 'Invalid credentials' };
+      case 'Session not found':
+        return { status: 404, message: 'Session not found' };
+      case 'Invalid or expired token':
+        return { status: 401, message: 'Invalid or expired token' };
+      default:
+        return { status: 500, message: 'Authentication failed' };
+    }
+  }
+}
+
+class UserController {
+  constructor(authService) {
+    this.authService = authService;
+  }
+
+  registerUser = async (req, res) => {
+    const userData = prepareUserForCreation(req.body);
+    const result = await this.authService.registerUser(userData);
+    
+    result.fold(
+      (error) => {
+        const { status, message } = ErrorMapper.mapAuthError(error);
+        return ResponseHandler.error(res, status, message);
+      },
+      (user) => {
+        const responseData = prepareUserForResponse(user);
+        return ResponseHandler.created(res, {
+          message: 'User registered successfully',
+          user: responseData
+        });
+      }
+    );
+  }
+
+  loginUser = async (req, res) => {
+    const credentials = req.body;
+    const result = await this.authService.loginUser(credentials);
+    
+    result.fold(
+      (error) => {
+        const { status, message } = ErrorMapper.mapAuthError(error);
+        return ResponseHandler.error(res, status, message);
+      },
+      ({ user, token }) => {
+        return ResponseHandler.success(res, {
+          access_token: token,
+          user: prepareUserForResponse(user)
+        });
+      }
+    );
+  }
+
+  logoutUser = async (req, res) => {
+    const token = req.body.access_token || req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return ResponseHandler.badRequest(res, 'Access token required');
+    }
+    
+    const result = await this.authService.logoutUser(token);
+    
+    result.fold(
+      (error) => {
+        const { status, message } = ErrorMapper.mapAuthError(error);
+        return ResponseHandler.error(res, status, message);
+      },
+      (data) => ResponseHandler.success(res, data)
+    );
+  }
+
+  getUserProfile = async (req, res) => {
+    const token = req.body.access_token || req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return ResponseHandler.badRequest(res, 'Access token required');
+    }
+    
+    const result = await this.authService.getUserProfile(token);
+    
+    result.fold(
+      (error) => {
+        const { status, message } = ErrorMapper.mapAuthError(error);
+        return ResponseHandler.error(res, status, message);
+      },
+      (user) => ResponseHandler.success(res, prepareUserForResponse(user))
+    );
+  }
+}
+
 const asyncHandler = (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
 
-const sendResponse = curry((statusCode, res, data) => {
-  res.status(statusCode).json(data);
-});
-
-const sendSuccess = sendResponse(200);
-const sendCreated = sendResponse(201);
-const sendError = curry((statusCode, res, message) => {
-  res.status(statusCode).json({ error: message });
-});
-
-const sendBadRequest = sendError(400);
-const sendUnauthorized = sendError(401);
-const sendNotFound = sendError(404);
-const sendConflict = sendError(409);
-const sendServerError = sendError(500);
-
-const validateInput = (validator) => (req, res, next) => {
-  const validation = validator(req.body);
-  if (!validation.isValid) {
-    return sendBadRequest(res, validation.errors.join(', '));
-  }
-  next();
-};
-
-const registerUser = asyncHandler(async (req, res) => {
-  try {
-    const userData = prepareUserForCreation(req.body);
-    const user = await authService.registerUser(userData);
-    const responseData = prepareUserForResponse(user);
-    
-    sendCreated(res, {
-      message: 'User registered successfully',
-      user: responseData
-    });
-  } catch (error) {
-    if (error.message === 'User already exists') {
-      return sendConflict(res, 'User already exists');
-    }
-    sendServerError(res, 'Registration failed');
-  }
-});
-
-const loginUser = asyncHandler(async (req, res) => {
-  try {
-    const credentials = req.body;
-    const { user, token } = await authService.loginUser(credentials);
-    
-    sendSuccess(res, {
-      access_token: token,
-      user: prepareUserForResponse(user)
-    });
-  } catch (error) {
-    if (error.message === 'User not found' || error.message === 'Invalid credentials') {
-      return sendUnauthorized(res, 'Invalid credentials');
-    }
-    sendServerError(res, 'Login failed');
-  }
-});
-
-const logoutUser = asyncHandler(async (req, res) => {
-  try {
-    const token = req.body.access_token || req.headers.authorization?.split(' ')[1];
-    
-    if (!token) {
-      return sendBadRequest(res, 'Access token required');
-    }
-    
-    const result = await authService.logoutUser(token);
-    sendSuccess(res, result);
-  } catch (error) {
-    if (error.message === 'Session not found') {
-      return sendNotFound(res, 'Session not found');
-    }
-    sendServerError(res, 'Logout failed');
-  }
-});
-
-const getUserProfile = asyncHandler(async (req, res) => {
-  try {
-    const token = req.body.access_token || req.headers.authorization?.split(' ')[1];
-    
-    if (!token) {
-      return sendBadRequest(res, 'Access token required');
-    }
-    
-    const user = await authService.getUserProfile(token);
-    sendSuccess(res, prepareUserForResponse(user));
-  } catch (error) {
-    if (error.message === 'Invalid or expired token') {
-      return sendUnauthorized(res, 'Invalid or expired token');
-    }
-    sendServerError(res, 'Failed to get user profile');
-  }
-});
-
-const createControllerPipeline = (...middlewares) => {
-  return middlewares.reduce((acc, middleware) => {
-    return (req, res, next) => acc(req, res, (err) => {
-      if (err) return next(err);
-      middleware(req, res, next);
-    });
-  });
-};
-
-const validateRegistration = validateInput(validateUserRegistration);
-const validateLogin = validateInput(validateUserLogin);
-
 module.exports = {
-  registerUser,
-  loginUser,
-  logoutUser,
-  getUserProfile,
-  validateRegistration,
-  validateLogin,
-  asyncHandler,
-  sendSuccess,
-  sendCreated,
-  sendBadRequest,
-  sendUnauthorized,
-  sendNotFound,
-  sendConflict,
-  sendServerError
+  ResponseHandler,
+  InputValidator,
+  ErrorMapper,
+  UserController,
+  asyncHandler
 };
